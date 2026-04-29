@@ -23,34 +23,31 @@ O sistema possibilita:
 
 ---
 
-## 📁 Estrutura do projeto
-
-```txt
+📁 Estrutura do projeto
 backend/
 ├── src/
 │   ├── config/
-│   │   └── db.js
+│   │   └── db.js                 # Conexão com o PostgreSQL
 │   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── abrigoController.js
-│   │   └── familiaController.js
+│   │   ├── authController.js     # Login e cadastro de usuários
+│   │   ├── abrigoController.js   # CRUD de abrigos + dashboard + geolocalização
+│   │   └── familiaController.js  # CRUD de famílias
 │   ├── middlewares/
-│   │   ├── autenticar.js
-│   │   └── validar.js
+│   │   ├── autenticar.js         # Verificação do token JWT
+│   │   └── validar.js            # Helper de validação Joi
 │   ├── routes/
 │   │   ├── authRoutes.js
 │   │   ├── usuarioRoutes.js
 │   │   ├── abrigoRoutes.js
 │   │   └── familiaRoutes.js
 │   ├── schemas/
-│   │   └── schemas.js
-│   ├── app.js
-│   └── swagger.js
-├── seed.js
-├── server.js
-├── .env.example
+│   │   └── schemas.js            # Schemas de validação Joi
+│   ├── app.js                    # Configuração do Express
+│   └── swagger.js                # Configuração da documentação
+├── seed.js                       # Script para popular o banco com dados reais
+├── server.js                     # Ponto de entrada da aplicação
+├── .env.example                  # Modelo de variáveis de ambiente
 └── package.json
-
 ---
 
 ## 🚀 Tecnologias
