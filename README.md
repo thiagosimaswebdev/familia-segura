@@ -273,7 +273,7 @@ node seed.js
 
 - **Backend:** [Render](https://familia-segura-whp2.onrender.com/) — Web Service Node.js
 - **Banco:** [Supabase](https://supabase.com) — PostgreSQL gerenciado/Privado
-- **Documentação:** `https://familia-segura-whp2.onrender.com/docs`
+- **Documentação:** [Swagger](https://familia-segura-whp2.onrender.com/) — Documentação Swagge
 
 ---
 
