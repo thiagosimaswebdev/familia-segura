@@ -21,33 +21,7 @@ O sistema possibilita:
 
 📌 **Importante:** os locais cadastrados no banco utilizam referências reais do Rio de Janeiro, porém o uso do sistema neste projeto é acadêmico e demonstrativo.
 
----
 
-📁 Estrutura do projeto
-backend/
-├── src/
-│   ├── config/
-│   │   └── db.js                 # Conexão com o PostgreSQL
-│   ├── controllers/
-│   │   ├── authController.js     # Login e cadastro de usuários
-│   │   ├── abrigoController.js   # CRUD de abrigos + dashboard + geolocalização
-│   │   └── familiaController.js  # CRUD de famílias
-│   ├── middlewares/
-│   │   ├── autenticar.js         # Verificação do token JWT
-│   │   └── validar.js            # Helper de validação Joi
-│   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── usuarioRoutes.js
-│   │   ├── abrigoRoutes.js
-│   │   └── familiaRoutes.js
-│   ├── schemas/
-│   │   └── schemas.js            # Schemas de validação Joi
-│   ├── app.js                    # Configuração do Express
-│   └── swagger.js                # Configuração da documentação
-├── seed.js                       # Script para popular o banco com dados reais
-├── server.js                     # Ponto de entrada da aplicação
-├── .env.example                  # Modelo de variáveis de ambiente
-└── package.json
 ---
 
 ## 🚀 Tecnologias
