@@ -1,11 +1,13 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   listarFamilias,
   buscarFamilia,
   criarFamilia,
   vincularAbrigo,
 } = require("../controllers/familiaController");
+
 const autenticar = require("../middlewares/autenticar");
 const validar = require("../middlewares/validar");
 const schemas = require("../schemas/schemas");
@@ -14,7 +16,8 @@ const schemas = require("../schemas/schemas");
  * @swagger
  * /familias:
  *   get:
- *     summary: Listar todas as famílias
+ *     summary: Listar famílias (PROTEGIDO)
+ *     description: Retorna famílias cadastradas com filtros e paginação. Requer autenticação.
  *     tags: [Famílias]
  *     security:
  *       - bearerAuth: []
@@ -39,8 +42,41 @@ const schemas = require("../schemas/schemas");
  *     responses:
  *       200:
  *         description: Lista de famílias
+ *       401:
+ *         description: Não autenticado
+ */
+router.get("/", autenticar, listarFamilias);
+
+/**
+ * @swagger
+ * /familias/{id}:
+ *   get:
+ *     summary: Buscar família por ID (PROTEGIDO)
+ *     tags: [Famílias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Família encontrada
+ *       404:
+ *         description: Família não encontrada
+ *       401:
+ *         description: Não autenticado
+ */
+router.get("/:id", autenticar, buscarFamilia);
+
+/**
+ * @swagger
+ * /familias:
  *   post:
- *     summary: Cadastrar família
+ *     summary: Cadastrar família (PROTEGIDO)
+ *     description: Cria uma nova família afetada e opcionalmente vincula a um abrigo.
  *     tags: [Famílias]
  *     security:
  *       - bearerAuth: []
@@ -73,43 +109,29 @@ const schemas = require("../schemas/schemas");
  *                 example: 1
  *               latitude:
  *                 type: number
- *                 example: -22.9068
  *               longitude:
  *                 type: number
- *                 example: -43.1729
  *               status:
  *                 type: string
  *                 example: desabrigada
  *               observacoes:
  *                 type: string
- *                 example: Família com 2 crianças e 1 idoso
  *     responses:
  *       201:
  *         description: Família cadastrada com sucesso
  *       409:
  *         description: CPF já cadastrado
- *
- * /familias/{id}:
- *   get:
- *     summary: Buscar família por ID
- *     tags: [Famílias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Família encontrada
- *       404:
- *         description: Família não encontrada
- *
+ *       401:
+ *         description: Não autenticado
+ */
+router.post("/", autenticar, validar(schemas.familia), criarFamilia);
+
+/**
+ * @swagger
  * /familias/{id}/abrigo:
  *   patch:
- *     summary: Vincular família a um abrigo
+ *     summary: Vincular família a um abrigo (PROTEGIDO)
+ *     description: Associa uma família a um abrigo disponível.
  *     tags: [Famílias]
  *     security:
  *       - bearerAuth: []
@@ -135,14 +157,12 @@ const schemas = require("../schemas/schemas");
  *       200:
  *         description: Família vinculada ao abrigo com sucesso
  *       400:
- *         description: Abrigo lotado ou fechado
+ *         description: Abrigo lotado ou inválido
  *       404:
  *         description: Família ou abrigo não encontrado
+ *       401:
+ *         description: Não autenticado
  */
-
-router.get("/", autenticar, listarFamilias);
-router.get("/:id", autenticar, buscarFamilia);
-router.post("/", autenticar, validar(schemas.familia), criarFamilia);
 router.patch("/:id/abrigo", autenticar, vincularAbrigo);
 
 module.exports = router;

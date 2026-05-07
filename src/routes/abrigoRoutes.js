@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   listarAbrigos,
   buscarAbrigo,
@@ -8,6 +9,7 @@ const {
   abrigosProximos,
   dashboard,
 } = require("../controllers/abrigoController");
+
 const autenticar = require("../middlewares/autenticar");
 const validar = require("../middlewares/validar");
 const schemas = require("../schemas/schemas");
@@ -18,8 +20,7 @@ const schemas = require("../schemas/schemas");
  *   get:
  *     summary: Resumo geral para o dashboard
  *     tags: [Abrigos]
- *     security:
- *       - bearerAuth: []
+ *     security: []  // 🔓 AGORA É PÚBLICO
  *     responses:
  *       200:
  *         description: Dados do dashboard
@@ -180,13 +181,17 @@ const schemas = require("../schemas/schemas");
  *         description: Abrigo atualizado com sucesso
  */
 
-// Rotas públicas — não precisam de token
-router.get("/dashboard", autenticar, dashboard);
+// ===============================
+// 🔓 ROTAS PÚBLICAS (SEM TOKEN)
+// ===============================
+router.get("/dashboard", dashboard);
 router.get("/proximos", abrigosProximos);
 router.get("/", listarAbrigos);
 router.get("/:id", buscarAbrigo);
 
-// Rotas protegidas — precisam de token
+// ===============================
+// 🔒 ROTAS PROTEGIDAS (COM TOKEN)
+// ===============================
 router.post("/", autenticar, validar(schemas.abrigo), criarAbrigo);
 router.patch("/:id", autenticar, validar(schemas.atualizarAbrigo), atualizarAbrigo);
 
