@@ -1,26 +1,21 @@
 # 🏠 Família Segura — Backend
 
-API REST para gerenciamento de abrigos e famílias afetadas por enchentes. Desenvolvida como projeto fullstack acadêmico no curso **Dev Fullstack da Vai Na Web**.
+API REST para gerenciamento de abrigos e famílias afetadas por enchentes.  
+Desenvolvida como projeto fullstack acadêmico no curso **Dev Fullstack da Vai Na Web**.
 
 ---
 
 ## 🎯 Sobre o projeto
 
-O **Família Segura** foi idealizado a partir de um cenário real: em períodos de enchentes e desastres urbanos, a falta de informação centralizada dificulta o encaminhamento de famílias desabrigadas e a gestão da capacidade dos abrigos disponíveis.
+O **Família Segura** nasceu como resposta a um problema real: durante enchentes, a falta de informação organizada dificulta que famílias desabrigadas encontrem abrigos disponíveis e que gestores coordenem o atendimento emergencial.
 
-A proposta da API é servir como núcleo de dados da plataforma, permitindo que aplicações web ou mobile consumam informações em tempo real para apoio operacional.
-
-O sistema possibilita:
-
-- Mapear abrigos reais com localização e status atualizado
-- Controlar capacidade total e vagas disponíveis
-- Cadastrar famílias afetadas e vinculá-las a abrigos
-- Consultar indicadores consolidados via dashboard
-- Buscar abrigos próximos por geolocalização
-- Proteger operações sensíveis com autenticação JWT
-
-📌 **Importante:** os locais cadastrados no banco utilizam referências reais do Rio de Janeiro, porém o uso do sistema neste projeto é acadêmico e demonstrativo.
-
+O sistema permite:
+- Mapear abrigos com localização real e status em tempo real
+- Cadastrar e acompanhar famílias afetadas
+- **Buscar familiares pelo nome — sem precisar de login**
+- Visualizar dashboard com dados consolidados
+- Encontrar abrigos mais próximos por geolocalização
+- Gerenciar usuários com painel administrativo
 
 ---
 
@@ -45,28 +40,69 @@ O sistema possibilita:
 backend/
 ├── src/
 │   ├── config/
-│   │   └── db.js                 # Conexão com o PostgreSQL
+│   │   └── db.js                 # Conexão com o PostgreSQL via Pool
 │   ├── controllers/
-│   │   ├── authController.js     # Login e cadastro de usuários
-│   │   ├── abrigoController.js   # CRUD de abrigos + dashboard + geolocalização
-│   │   └── familiaController.js  # CRUD de famílias
+│   │   ├── authController.js     # Login e cadastro (verifica status pendente/ativo)
+│   │   ├── abrigoController.js   # CRUD + dashboard + geolocalização (Haversine)
+│   │   ├── familiaController.js  # CRUD + busca pública por membros
+│   │   └── adminController.js    # Gerenciamento de usuários (só admin)
 │   ├── middlewares/
-│   │   ├── autenticar.js         # Verificação do token JWT
+│   │   ├── autenticar.js         # Verifica token JWT (bloqueia rotas privadas)
 │   │   └── validar.js            # Helper de validação Joi
 │   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── usuarioRoutes.js
-│   │   ├── abrigoRoutes.js
-│   │   └── familiaRoutes.js
+│   │   ├── authRoutes.js         # POST /login
+│   │   ├── usuarioRoutes.js      # POST /usuarios
+│   │   ├── abrigoRoutes.js       # CRUD /abrigos
+│   │   ├── familiaRoutes.js      # GET público + POST/PATCH privado
+│   │   └── adminRoutes.js        # GET/PATCH/DELETE /admin/usuarios
 │   ├── schemas/
 │   │   └── schemas.js            # Schemas de validação Joi
-│   ├── app.js                    # Configuração do Express
+│   ├── app.js                    # Configuração Express + registro de rotas
 │   └── swagger.js                # Configuração da documentação
-├── seed.js                       # Script para popular o banco com dados reais
-├── server.js                     # Ponto de entrada da aplicação
+├── seed.js                       # 15 abrigos reais do Rio de Janeiro
+├── server.js                     # Ponto de entrada
 ├── .env.example                  # Modelo de variáveis de ambiente
 └── package.json
 ```
+
+---
+
+## 🔐 Controle de acesso — onde as permissões são definidas
+
+O controle de acesso é feito em **dois lugares**:
+
+### 1. `src/routes/*.js` — define quais rotas exigem token
+```js
+// PÚBLICA — qualquer pessoa acessa
+router.get("/familias", listarFamilias);
+
+// PRIVADA — exige token JWT válido
+router.post("/familias", autenticar, validar(schemas.familia), criarFamilia);
+```
+
+### 2. `src/middlewares/autenticar.js` — verifica o token
+```js
+// Se não tiver token ou for inválido → retorna 401
+// Se o token for válido → chama next() e segue para o controller
+```
+
+### Tabela de permissões
+
+| Rota | Método | Acesso |
+|---|---|---|
+| `/abrigos` | GET | ✅ Público |
+| `/abrigos/:id` | GET | ✅ Público |
+| `/abrigos/proximos` | GET | ✅ Público |
+| `/abrigos` | POST | 🔒 Autenticado |
+| `/abrigos/:id` | PATCH | 🔒 Autenticado |
+| `/familias` | GET | ✅ Público (busca por membros) |
+| `/familias/:id` | GET | ✅ Público |
+| `/familias` | POST | 🔒 Autenticado |
+| `/familias/:id/abrigo` | PATCH | 🔒 Autenticado |
+| `/abrigos/dashboard` | GET | 🔒 Autenticado |
+| `/admin/usuarios` | GET/PATCH/DELETE | 🔒 Admin |
+| `/login` | POST | ✅ Público |
+| `/usuarios` | POST | ✅ Público |
 
 ---
 
@@ -75,179 +111,131 @@ backend/
 ### Pré-requisitos
 - Node.js v18+
 - PostgreSQL ou conta no Supabase
-- npm
 
 ### Instalação
 
 ```bash
-# Clone o repositório
 git clone https://github.com/thiagosimaswebdev/familia-segura.git
 cd familia-segura/backend
-
-# Instale as dependências
 npm install
 ```
 
 ### Variáveis de ambiente
 
-Crie um arquivo `.env` na pasta `backend` com:
+Crie `.env` na pasta `backend`:
 
 ```env
-DB_HOST=seu_host_do_supabase
+DB_HOST=aws-1-us-east-2.pooler.supabase.com
 DB_PORT=6543
 DB_USER=postgres.seu_projeto_id
 DB_PASSWORD=sua_senha
 DB_NAME=postgres
 JWT_SECRET=uma_string_secreta_longa
-PORT=3000
+PORT=3001
 ```
 
 ### Banco de dados
 
-Execute no SQL Editor do Supabase ou no seu PostgreSQL:
-
 ```sql
 CREATE TABLE usuarios (
-  id SERIAL PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL,
-  usuario VARCHAR(50) NOT NULL UNIQUE,
-  senha VARCHAR(255) NOT NULL,
+  id        SERIAL PRIMARY KEY,
+  nome      VARCHAR(100) NOT NULL,
+  usuario   VARCHAR(50)  NOT NULL UNIQUE,
+  senha     VARCHAR(255) NOT NULL,
+  status    VARCHAR(20)  DEFAULT 'pendente',
+  role      VARCHAR(20)  DEFAULT 'operador',
   criado_em TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE abrigos (
-  id SERIAL PRIMARY KEY,
-  nome VARCHAR(255) NOT NULL,
-  endereco VARCHAR(255) NOT NULL,
-  bairro VARCHAR(100) NOT NULL,
-  cidade VARCHAR(100) NOT NULL DEFAULT 'Rio de Janeiro',
-  latitude DECIMAL(10, 8) NOT NULL,
-  longitude DECIMAL(11, 8) NOT NULL,
-  capacidade_total INT NOT NULL,
-  vagas_disponiveis INT NOT NULL,
-  status VARCHAR(20) DEFAULT 'disponivel',
-  telefone VARCHAR(20),
-  responsavel VARCHAR(100),
-  criado_em TIMESTAMP DEFAULT NOW()
+  id                SERIAL PRIMARY KEY,
+  nome              VARCHAR(255)  NOT NULL,
+  endereco          VARCHAR(255)  NOT NULL,
+  bairro            VARCHAR(100)  NOT NULL,
+  cidade            VARCHAR(100)  NOT NULL DEFAULT 'Rio de Janeiro',
+  latitude          DECIMAL(10,8) NOT NULL,
+  longitude         DECIMAL(11,8) NOT NULL,
+  capacidade_total  INT           NOT NULL,
+  vagas_disponiveis INT           NOT NULL,
+  status            VARCHAR(20)   DEFAULT 'disponivel',
+  telefone          VARCHAR(20),
+  responsavel       VARCHAR(100),
+  criado_em         TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE familias (
-  id SERIAL PRIMARY KEY,
+  id               SERIAL PRIMARY KEY,
   nome_responsavel VARCHAR(100) NOT NULL,
-  cpf VARCHAR(14) NOT NULL UNIQUE,
-  telefone VARCHAR(20) NOT NULL,
-  num_membros INT NOT NULL,
-  abrigo_id INT,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  status VARCHAR(20) DEFAULT 'desabrigada',
-  observacoes TEXT,
-  criado_em TIMESTAMP DEFAULT NOW(),
+  cpf              VARCHAR(14)  NOT NULL UNIQUE,
+  telefone         VARCHAR(20)  NOT NULL,
+  num_membros      INT          NOT NULL,
+  abrigo_id        INT,
+  latitude         DECIMAL(10,8),
+  longitude        DECIMAL(11,8),
+  status           VARCHAR(20)  DEFAULT 'desabrigada',
+  membros          TEXT,
+  criado_em        TIMESTAMP DEFAULT NOW(),
   CONSTRAINT fk_abrigo FOREIGN KEY (abrigo_id)
     REFERENCES abrigos(id) ON DELETE SET NULL
 );
 ```
 
-### Rodar o servidor
+### Rodar
 
 ```bash
-# Desenvolvimento (com hot reload)
-npm run dev
-
-# Popular o banco com 15 abrigos reais do Rio de Janeiro
-node seed.js
-
-# Produção
-npm start
-```
-
-O servidor estará disponível em `http://localhost:3000`
-A documentação Swagger em `http://localhost:3000/docs`
-
----
-
-## 📋 Rotas da API
-
-### Auth (públicas — sem token)
-
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/usuarios` | Cadastrar novo usuário |
-| POST | `/login` | Fazer login e obter token JWT |
-
-### Abrigos
-
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/abrigos` | Não | Listar abrigos (com filtros e paginação) |
-| GET | `/abrigos/:id` | Não | Buscar abrigo por ID |
-| GET | `/abrigos/proximos?lat=&lng=&raio=` | Não | Abrigos mais próximos por coordenada |
-| GET | `/abrigos/dashboard` | Sim | Resumo geral para o dashboard |
-| POST | `/abrigos` | Sim | Criar novo abrigo |
-| PATCH | `/abrigos/:id` | Sim | Atualizar vagas e/ou status |
-
-### Famílias
-
-| Método | Rota | Auth | Descrição |
-|---|---|---|---|
-| GET | `/familias` | Sim | Listar famílias (com filtros e paginação) |
-| GET | `/familias/:id` | Sim | Buscar família por ID |
-| POST | `/familias` | Sim | Cadastrar família |
-| PATCH | `/familias/:id/abrigo` | Sim | Vincular família a um abrigo |
-
-### Filtros disponíveis
-
-```
-GET /abrigos?status=disponivel&bairro=Tijuca&page=1&limit=9
-GET /familias?status=desabrigada&page=1&limit=10
-GET /abrigos/proximos?lat=-22.9068&lng=-43.1729&raio=10
+npm run dev      # desenvolvimento (nodemon)
+node seed.js     # popula 15 abrigos reais do Rio de Janeiro
+npm start        # produção
 ```
 
 ---
 
-## 🔐 Como usar a autenticação
+## 🔍 Busca pública de familiares
 
-**1. Cadastre um usuário:**
-```json
-POST /usuarios
-{
-  "nome": "João Silva",
-  "usuario": "joao",
-  "senha": "123456"
-}
+Qualquer pessoa pode localizar um familiar abrigado:
+
+```
+GET /familias?busca=João Souza
 ```
 
-**2. Faça login:**
-```json
-POST /login
-{
-  "usuario": "joao",
-  "senha": "123456"
-}
-```
+A busca percorre:
+- `nome_responsavel` — nome do responsável pela família
+- `membros` — lista de nomes dos membros (ex: "Maria Souza, João Souza, Ana Souza")
 
-**3. Use o token nas requisições protegidas:**
-```
-Authorization: Bearer eyJhbGci...
-```
+Retorna a família com dados do abrigo vinculado.
 
 ---
 
-## 🌱 Seed — dados reais
+## 👤 Sistema de usuários
 
-O arquivo `seed.js` popula o banco com **15 abrigos reais do Rio de Janeiro** com coordenadas reais — ginásios, escolas municipais e centros comunitários distribuídos pela cidade.
+| Status | Descrição |
+|---|---|
+| `pendente` | Recém cadastrado — aguarda aprovação do admin |
+| `ativo` | Aprovado — pode fazer login normalmente |
+| `inativo` | Desativado pelo admin |
+
+| Role | Permissões |
+|---|---|
+| `operador` | Cadastra e edita abrigos e famílias |
+| `admin` | Tudo + gerencia usuários via `/admin` |
+
+---
+
+## 🌱 Seed
 
 ```bash
 node seed.js
 ```
+
+Popula o banco com **15 abrigos reais** do Rio de Janeiro — ginásios, escolas municipais e centros comunitários com coordenadas reais, distribuídos pela cidade.
 
 ---
 
 ## 🌐 Deploy
 
-- **Backend:** [Render](https://familia-segura-whp2.onrender.com/) — Web Service Node.js
-- **Banco:** [Supabase](https://supabase.com) — PostgreSQL gerenciado/Privado
-- **Documentação:** [Swagger](https://familia-segura-whp2.onrender.com/) — Documentação Swagge
+- **Backend:** [Render](https://render.com) — Web Service Node.js
+- **Banco:** [Supabase](https://supabase.com) — PostgreSQL gerenciado
+- **Docs:** `https://sua-api.onrender.com/docs`
 
 ---
 

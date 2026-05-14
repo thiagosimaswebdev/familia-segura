@@ -1,6 +1,5 @@
 const express = require("express");
-const router = express.Router();
-
+const router  = express.Router();
 const {
   listarFamilias,
   buscarFamilia,
@@ -9,28 +8,41 @@ const {
 } = require("../controllers/familiaController");
 
 const autenticar = require("../middlewares/autenticar");
-const validar = require("../middlewares/validar");
-const schemas = require("../schemas/schemas");
+const validar    = require("../middlewares/validar");
+const schemas    = require("../schemas/schemas");
+
+// ══════════════════════════════════════════════════════════════
+// CONTROLE DE ACESSO — onde as permissões são definidas
+//
+// ✅ SEM autenticar → rota PÚBLICA (qualquer pessoa acessa)
+// 🔒 COM autenticar → rota PRIVADA (exige token JWT válido)
+//
+// O middleware autenticar() intercepta a requisição,
+// verifica o token JWT no header Authorization e:
+//   → token válido:   chama next() e continua para o controller
+//   → token inválido: retorna 401 e bloqueia o acesso
+// ══════════════════════════════════════════════════════════════
 
 /**
  * @swagger
  * /familias:
  *   get:
- *     summary: Listar famílias (PROTEGIDO)
- *     description: Retorna famílias cadastradas com filtros e paginação. Requer autenticação.
+ *     summary: Listar e buscar famílias (público)
+ *     description: Qualquer pessoa pode buscar familiares pelo nome. Não requer autenticação.
  *     tags: [Famílias]
- *     security:
- *       - bearerAuth: []
+ *     security: []
  *     parameters:
+ *       - in: query
+ *         name: busca
+ *         schema:
+ *           type: string
+ *         description: Nome do membro ou responsável
+ *         example: João Souza
  *       - in: query
  *         name: status
  *         schema:
  *           type: string
  *           enum: [desabrigada, em_abrigo, reassentada]
- *       - in: query
- *         name: abrigo_id
- *         schema:
- *           type: integer
  *       - in: query
  *         name: page
  *         schema:
@@ -42,41 +54,8 @@ const schemas = require("../schemas/schemas");
  *     responses:
  *       200:
  *         description: Lista de famílias
- *       401:
- *         description: Não autenticado
- */
-router.get("/", autenticar, listarFamilias);
-
-/**
- * @swagger
- * /familias/{id}:
- *   get:
- *     summary: Buscar família por ID (PROTEGIDO)
- *     tags: [Famílias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Família encontrada
- *       404:
- *         description: Família não encontrada
- *       401:
- *         description: Não autenticado
- */
-router.get("/:id", autenticar, buscarFamilia);
-
-/**
- * @swagger
- * /familias:
  *   post:
- *     summary: Cadastrar família (PROTEGIDO)
- *     description: Cria uma nova família afetada e opcionalmente vincula a um abrigo.
+ *     summary: Cadastrar família (privado)
  *     tags: [Famílias]
  *     security:
  *       - bearerAuth: []
@@ -94,7 +73,7 @@ router.get("/:id", autenticar, buscarFamilia);
  *             properties:
  *               nome_responsavel:
  *                 type: string
- *                 example: Maria Silva
+ *                 example: Maria Souza
  *               cpf:
  *                 type: string
  *                 example: "123.456.789-00"
@@ -103,35 +82,41 @@ router.get("/:id", autenticar, buscarFamilia);
  *                 example: "21999999999"
  *               num_membros:
  *                 type: integer
- *                 example: 4
+ *                 example: 3
+ *               membros:
+ *                 type: string
+ *                 example: "Maria Souza, João Souza, Ana Souza"
  *               abrigo_id:
  *                 type: integer
  *                 example: 1
- *               latitude:
- *                 type: number
- *               longitude:
- *                 type: number
- *               status:
- *                 type: string
- *                 example: desabrigada
- *               observacoes:
- *                 type: string
  *     responses:
  *       201:
  *         description: Família cadastrada com sucesso
+ *       401:
+ *         description: Token não informado ou inválido
  *       409:
  *         description: CPF já cadastrado
- *       401:
- *         description: Não autenticado
- */
-router.post("/", autenticar, validar(schemas.familia), criarFamilia);
-
-/**
- * @swagger
+ *
+ * /familias/{id}:
+ *   get:
+ *     summary: Buscar família por ID (público)
+ *     tags: [Famílias]
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Família encontrada
+ *       404:
+ *         description: Família não encontrada
+ *
  * /familias/{id}/abrigo:
  *   patch:
- *     summary: Vincular família a um abrigo (PROTEGIDO)
- *     description: Associa uma família a um abrigo disponível.
+ *     summary: Vincular família a um abrigo (privado)
  *     tags: [Famílias]
  *     security:
  *       - bearerAuth: []
@@ -155,14 +140,17 @@ router.post("/", autenticar, validar(schemas.familia), criarFamilia);
  *                 example: 1
  *     responses:
  *       200:
- *         description: Família vinculada ao abrigo com sucesso
- *       400:
- *         description: Abrigo lotado ou inválido
- *       404:
- *         description: Família ou abrigo não encontrado
+ *         description: Família vinculada
  *       401:
- *         description: Não autenticado
+ *         description: Token não informado ou inválido
  */
+
+// ── ROTAS PÚBLICAS ────────────────────────────────────────────
+router.get("/",    listarFamilias); // busca pública por membros
+router.get("/:id", buscarFamilia);  // detalhe público
+
+// ── ROTAS PRIVADAS ────────────────────────────────────────────
+router.post("/",            autenticar, validar(schemas.familia), criarFamilia);
 router.patch("/:id/abrigo", autenticar, vincularAbrigo);
 
 module.exports = router;
